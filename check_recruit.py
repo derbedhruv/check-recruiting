@@ -1,7 +1,7 @@
 # cache local copies of websites of companies and keep checking if something was posted by them
 # will only look at the difference between the <html> portion
 # if something is found, send an email to me
-import sys, requests
+import sys, requests, difflib
 from bs4 import BeautifulSoup
 from smtplib import SMTP
 
@@ -43,7 +43,12 @@ def checksite(SITE):
 
   # now, if there's a cached copy, compare with it. If there isn't one, then replcae it with this
   try:
-    with open('cached/' + FILENAME + '.cachedstuff', 'w') as f:
+    with open('cached/' + FILENAME + '.cachedstuff', 'r') as f:
       cached_copy = f.read()
+      if s == cached_copy:
+        # nothing's happened.
+        return None
+      else:
+        return ''.join([x[2] for x in difflib.ndiff(a, b) if x[0] == '-'])
 
-sendmessage('Recruiting alert', 'We found something.')
+# sendmessage('Recruiting alert', 'We found something.')
