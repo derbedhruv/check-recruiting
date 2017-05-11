@@ -1,20 +1,23 @@
 # cache local copies of websites of companies and keep checking if something was posted by them
 # will only look at the difference between the <html> portion
 # if something is found, send an email to me
-import sys, requests, difflib
+import sys, requests, difflib, re
 from bs4 import BeautifulSoup
 from smtplib import SMTP
 
+SAVE_FOLDER = './cached/'
+
 # get username and password from the login.txt file
-try:
-  with open('login.txt', 'r') as f:
-    smptpserver, username, password, from_addr, to_addr = f.read().split()
-except IOError:
-  print "File login.txt not found!"
-  sys.exit(0)
-except:
-  print "something's wrong with the login.txt file.. please check!"
-  sys.exit(0)
+def get_info():
+  try:
+    with open('login.txt', 'r') as f:
+      smptpserver, username, password, from_addr, to_addr = f.read().split()
+  except IOError:
+    print "File login.txt not found!"
+    sys.exit(0)
+  except:
+    print "something's wrong with the login.txt file.. please check!"
+    sys.exit(0)
 
 def sendmessage(SUBJECT, TEXT):
   # REFERENCES:
@@ -31,11 +34,15 @@ def checksite(SITE):
   # will check given site for whether there hvae been any changes from the cached copy
   # if there has been any then will return the difference, else None
   # if there is no cached copy, then will cache the local one and do nothing
-  FILENAME = re.search('\.[a-z]+\.', SITE).group(0)[1:-1]   # returns THIS in www.THIS.whatever
-  def cachecopy(s, SITE):
+  FILENAME = re.search('\.[a-z]+\.', SITE)   # returns THIS in www.THIS.whatever
+  if FILENAME == None:
+    FILENAME = 'localhost'
+  else:
+    FILENAME == FILENAME.group(0)[1:-1] 
+  def cachecopy(s, FILENAME):
     # save the string s, containing the html of the page, to a local file with a special name
-    with open('cached/' + FILENAME + '.cachedstuff', 'w') as f:
-      f.write(s)
+    f = open(SAVE_FOLDER + FILENAME + '.cachedstuff', 'w')
+    f.write(s); f.close()
   # read in the content of the site and only look at stuff between <body> and <body>
   # and remove any javascript and stuff
   res = requests.get(SITE)
@@ -43,12 +50,19 @@ def checksite(SITE):
 
   # now, if there's a cached copy, compare with it. If there isn't one, then replcae it with this
   try:
-    with open('cached/' + FILENAME + '.cachedstuff', 'r') as f:
+    with open(SAVE_FOLDER + FILENAME + '.cachedstuff', 'r') as f:
       cached_copy = f.read()
-      if s == cached_copy:
-        # nothing's happened.
-        return None
-      else:
-        return ''.join([x[2] for x in difflib.ndiff(a, b) if x[0] == '-'])
-
+    if (s == cached_copy):
+      # nothing's happened.
+      print 'no change observed'
+    else:
+      print "there's been a change!"
+      # update the cached copy
+      cachecopy(s, FILENAME)
+      site_diff = ''.join([x[2] for x in difflib.ndiff(s, cached_copy) if x[0] == '-'])
+      if site_diff != '':
+        return site_diff
+  except IOError:
+    cachecopy(s, FILENAME)
+  return None
 # sendmessage('Recruiting alert', 'We found something.')
