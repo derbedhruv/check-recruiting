@@ -64,7 +64,7 @@ def checksite(SITE):
       cachecopy(s, FILENAME)
       site_diff = ''.join([x[2] for x in difflib.ndiff(s, cached_copy) if x[0] == '-'])
       print site_diff
-      if site_diff != '':
+      if len(site_diff) > 10:	# less than 10 characters difference is minor
         sendmessage('Recruiting Alert for ' + SITE, site_diff)
       return site_diff
   except IOError:
