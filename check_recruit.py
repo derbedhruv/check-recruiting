@@ -1,3 +1,4 @@
+#!/usr/local/bin/python2.7
 # cache local copies of websites of companies and keep checking if something was posted by them
 # will only look at the difference between the <html> portion
 # if something is found, send an email to me
@@ -59,12 +60,13 @@ def checksite(SITE):
       # nothing's happened.
       print 'no change observed'
     else:
-      print "there's been a change!"
       # update the cached copy
       cachecopy(s, FILENAME)
       site_diff = ''.join([x[2] for x in difflib.ndiff(s, cached_copy) if x[0] == '-'])
       print site_diff
-      if len(site_diff) > 10:	# less than 10 characters difference is minor
+      if len(site_diff) > 10 and site_diff.count(' ') > 0:	
+        # less than 10 characters difference is minor, no spaces in 10 chars means that the change is not human readable
+        print "there's been a change!"
         sendmessage('Recruiting Alert for ' + SITE, site_diff)
       return site_diff
   except IOError:
