@@ -2,7 +2,6 @@
 # will only look at the difference between the <html> portion
 # if something is found, send an email to me
 import sys, requests, difflib, re
-from bs4 import BeautifulSoup
 from smtplib import SMTP
 
 SAVE_FOLDER = './cached/'
@@ -12,6 +11,7 @@ def get_info():
   try:
     with open('login.txt', 'r') as f:
       smptpserver, username, password, from_addr, to_addr = f.read().split()
+      return smptpserver, username, password, from_addr, to_addr 
   except IOError:
     print "File login.txt not found!"
     sys.exit(0)
@@ -22,9 +22,11 @@ def get_info():
 def sendmessage(SUBJECT, TEXT):
   # REFERENCES:
   # * https://community.webfaction.com/questions/8989/sending-mail-with-python
-  msg = 'Subject: {}\n\n{}'.format(SUBJECT, TEXT)
+  smptpserver, username, password, from_addr, to_addr = get_info()
+  print 'sending email to', to_addr
+  msg = 'Subject: {}\n\n{}'.format(SUBJECT.encode('utf-8'), TEXT.encode('utf-8'))
   s = SMTP()
-  s.connect(smptpserve)
+  s.connect(smptpserver)
   s.login(username, password)
   s.sendmail(from_addr, [to_addr], msg)
   s.quit()
@@ -38,11 +40,12 @@ def checksite(SITE):
   if FILENAME == None:
     FILENAME = 'localhost'
   else:
-    FILENAME == FILENAME.group(0)[1:-1] 
+    FILENAME = FILENAME.group(0)[1:-1] 
+  print FILENAME
   def cachecopy(s, FILENAME):
     # save the string s, containing the html of the page, to a local file with a special name
     f = open(SAVE_FOLDER + FILENAME + '.cachedstuff', 'w')
-    f.write(s); f.close()
+    f.write(s.encode('utf-8')); f.close()
   # read in the content of the site and only look at stuff between <body> and <body>
   # and remove any javascript and stuff
   res = requests.get(SITE)
@@ -60,9 +63,21 @@ def checksite(SITE):
       # update the cached copy
       cachecopy(s, FILENAME)
       site_diff = ''.join([x[2] for x in difflib.ndiff(s, cached_copy) if x[0] == '-'])
+      print site_diff
       if site_diff != '':
-        return site_diff
+        sendmessage('Recruiting Alert for ' + SITE, site_diff)
+      return site_diff
   except IOError:
     cachecopy(s, FILENAME)
   return None
 # sendmessage('Recruiting alert', 'We found something.')
+
+# test personal website
+# checksite('http://derbedhruv.webfactional.com/')
+
+# read in list of sites, check them
+with open('companies.txt', 'r') as f:
+  companies = f.read().split()
+
+for company in companies:
+  checksite(company)
