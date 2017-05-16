@@ -2,7 +2,7 @@
 # cache local copies of websites of companies and keep checking if something was posted by them
 # will only look at the difference between the <html> portion
 # if something is found, send an email to me
-import sys, requests, difflib, re
+import sys, requests, difflib, re, datetime, time
 from smtplib import SMTP
 
 SAVE_FOLDER = './cached/'
@@ -50,7 +50,7 @@ def checksite(SITE):
   # read in the content of the site and only look at stuff between <body> and <body>
   # and remove any javascript and stuff
   res = requests.get(SITE)
-  s = re.search('<body>.+</body>', res.text.replace('\n', '')).group(0)
+  s = re.search('<body.+</body>', res.text.replace('\n', '')).group(0)
 
   # now, if there's a cached copy, compare with it. If there isn't one, then replcae it with this
   try:
@@ -63,7 +63,6 @@ def checksite(SITE):
       # update the cached copy
       cachecopy(s, FILENAME)
       site_diff = ''.join([x[2] for x in difflib.ndiff(s, cached_copy) if x[0] == '-'])
-      print site_diff
       if len(site_diff) > 10 and site_diff.count(' ') > 0:	
         # less than 10 characters difference is minor, no spaces in 10 chars means that the change is not human readable
         print "there's been a change!"
@@ -76,10 +75,16 @@ def checksite(SITE):
 
 # test personal website
 # checksite('http://derbedhruv.webfactional.com/')
+if __name__ == '__main__':
+  # update log informing that check was done on date
+  with open('log.log', 'a') as log:
+    ts = time.time()
+    sttime = datetime.datetime.fromtimestamp(ts).strftime('%Y%m%d_%H:%M:%S - ')
+    log.write(sttime + 'Checked' + '\n')
 
-# read in list of sites, check them
-with open('companies.txt', 'r') as f:
-  companies = f.read().split()
+  # read in list of sites, check them
+  with open('companies.txt', 'r') as f:
+    companies = f.read().split()
 
-for company in companies:
-  checksite(company)
+  for company in companies:
+    checksite(company)
