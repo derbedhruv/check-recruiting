@@ -2,15 +2,16 @@
 # cache local copies of websites of companies and keep checking if something was posted by them
 # will only look at the difference between the <html> portion
 # if something is found, send an email to me
-import sys, requests, difflib, re, datetime, time
+import os, sys, requests, difflib, re, datetime, time
 from smtplib import SMTP
 
-SAVE_FOLDER = './cached/'
+app_folder = os.path.dirname(os.path.realpath(__file__))
+SAVE_FOLDER = os.path.join(app_folder, 'cached/')
 
 # get username and password from the login.txt file
 def get_info():
   try:
-    with open('login.txt', 'r') as f:
+    with open(os.path.abspath(os.path.join(app_folder,'login.txt')), 'r') as f:
       smptpserver, username, password, from_addr, to_addr = f.read().split()
       return smptpserver, username, password, from_addr, to_addr 
   except IOError:
@@ -45,7 +46,7 @@ def checksite(SITE):
   print FILENAME
   def cachecopy(s, FILENAME):
     # save the string s, containing the html of the page, to a local file with a special name
-    f = open(SAVE_FOLDER + FILENAME + '.cachedstuff', 'w')
+    f = open(os.path.join(SAVE_FOLDER, FILENAME + '.cachedstuff'), 'w')
     f.write(s.encode('utf-8')); f.close()
   # read in the content of the site and only look at stuff between <body> and <body>
   # and remove any javascript and stuff
@@ -83,8 +84,13 @@ if __name__ == '__main__':
     log.write(sttime + 'Checked' + '\n')
 
   # read in list of sites, check them
-  with open('companies.txt', 'r') as f:
+  with open(os.path.abspath(os.path.join(app_folder,'companies.txt')), 'r') as f:
     companies = f.read().split()
 
   for company in companies:
     checksite(company)
+
+  # add extra one for Uber - uses an API to search for positions
+  uber = 'https://www.uber.com/api/jobs/filter?country=united-states-of-america&city=all&team=all&subTeam=all&keywords=associate%20product%20manager&page='
+  if requests.get(uber).json()['jobs'] != []:
+    print 'Uber APM has opened!'
